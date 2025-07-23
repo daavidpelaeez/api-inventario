@@ -2,7 +2,11 @@ package com.tuempresa.gestioninventario.api.controller;
 
 import com.tuempresa.gestioninventario.api.model.Producto;
 import com.tuempresa.gestioninventario.api.repository.ProductoRepository;
+import com.tuempresa.gestioninventario.api.service.ProductoService;
+import com.tuempresa.gestioninventario.api.service.UsuarioService;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,52 +17,40 @@ import java.util.Optional;
 @RequestMapping("/api/productos")
 public class ProductoController {
 
-    @Autowired
-    private ProductoRepository productoRepository;
+    private final ProductoService productoService;
+
+    public ProductoController(ProductoService productoService) {
+        this.productoService = productoService;
+    }
 
     @GetMapping
-    public List<Producto> obtenerTodos() {
-        return productoRepository.findAll();
+    public List<Producto> obtenerProductos(){
+        return productoService.obtenerProductos();
     }
 
     @GetMapping("/{id}")
-    public Optional<Producto> obtenerPorId(@PathVariable Long id) {
-        return productoRepository.findById(id);
-    }
-
-    @PostMapping
-    public Producto crearProducto(@RequestBody Producto producto) {
-        return productoRepository.save(producto);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Producto> actualizarProducto(@PathVariable Long id, @RequestBody Producto productoActualizado) {
-        Optional<Producto> productoExistente = productoRepository.findById(id);
-
-        if (productoExistente.isPresent()) {
-            Producto producto = productoExistente.get();
-            producto.setNombre(productoActualizado.getNombre());
-            producto.setDescripcion(productoActualizado.getDescripcion());
-            producto.setCantidad(productoActualizado.getCantidad());
-            producto.setPrecio(productoActualizado.getPrecio());
-
-            Producto productoGuardado = productoRepository.save(producto);
-            return ResponseEntity.ok(productoGuardado);
-        } else {
+    public ResponseEntity<Producto>  ProductoPorID(@PathVariable Long id){
+        try {
+            Producto producto = productoService.obtenerProductoPorId(id);
+            return ResponseEntity.ok(producto);
+        } catch (EntityNotFoundException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
+    @PostMapping
+    public ResponseEntity<Producto> crearProductos(@RequestBody Producto producto){
+        Producto productoCreado = productoService.crearProducto(producto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(productoCreado);
+    }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarProducto(@PathVariable Long id) {
-        Optional<Producto> productoExistente = productoRepository.findById(id);
-
-        if (productoExistente.isPresent()) {
-            productoRepository.deleteById(id);
-            return ResponseEntity.noContent().build();  // HTTP 204 No Content
-        } else {
-            return ResponseEntity.notFound().build();  // HTTP 404 Not Found
+    public ResponseEntity<Producto> eliminarProducto(@PathVariable Long id) {
+        try{
+            Producto productoEliminado = productoService.eliminarProducto(id);
+            return ResponseEntity.ok(productoEliminado);
+        }catch(EntityNotFoundException e){
+            return ResponseEntity.notFound().build();
         }
     }
 
